@@ -58,15 +58,24 @@ npm start            # serves on http://localhost:8080
 
 Open the page, press **Gemini settings**, paste a Gemini API key from Google AI Studio, then **Start talking** (or type). **Run the scripted demo** works without a key: the lines are pre-written, but every tool call and safety rule runs for real.
 
-## Quality
+## Quality and measured performance
 
 ```bash
 npm install
-npm run check        # ESLint (complexity ≤ 8), Prettier, TypeScript strict checkJs, unit tests
+npm run check        # ESLint (complexity ≤ 8), Prettier, TypeScript strict checkJs, 33 unit tests
 npm run test:e2e     # Playwright: demo, fake Gemini Live socket, settings, reset, accessibility, phone layout
+npm run bench        # retrieval benchmark
 ```
 
-CI runs all of this on every push.
+| Measure | Result |
+| --- | --- |
+| Voice response time, real Gemini 3.8 Live session (end of speech → first audio, 13 turns) | median 1.5 s, range 1.1–2.4 s |
+| Retrieval, 18 English and Hinglish questions: right source in top 3 | 18 / 18 |
+| Retrieval: right source ranked first | 16 / 18 |
+| Retrieval time per query (in the browser, no server) | under 1 ms |
+| Safety rules (LOTO gate, read-back before confirm) | enforced in code, covered by unit tests |
+
+CI runs lint, formatting, type checks, unit and end-to-end tests on every push.
 
 ## Impact
 
