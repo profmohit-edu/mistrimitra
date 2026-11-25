@@ -13,7 +13,8 @@ import {
 test('setup puts modalities, tools and transcription under setup', () => {
   const s = buildSetup({ systemInstruction: 'sys', tools: [{ name: 't' }] });
   assert.equal(s.setup.model, 'models/gemini-3.8-live');
-  assert.deepEqual(s.setup.responseModalities, ['AUDIO']);
+  assert.deepEqual(s.setup.generationConfig.responseModalities, ['AUDIO']);
+  assert.equal(s.setup.responseModalities, undefined);
   assert.deepEqual(s.setup.tools, [{ functionDeclarations: [{ name: 't' }] }]);
   assert.deepEqual(s.setup.inputAudioTranscription, {});
   assert.equal(s.setup.systemInstruction.parts[0].text, 'sys');
@@ -117,4 +118,35 @@ test('connect rejects when the socket errors', async () => {
   FakeSocket.last.onerror();
   await assert.rejects(done, /Could not reach Gemini/);
   session.close();
+});
+
+test('connect rejects with the reason when Gemini closes the session during setup', async () => {
+  const events = [];
+  const session = new LiveSession({
+    apiKey: 'k',
+    setup: {},
+    onEvent: (e) => events.push(e),
+    runTool: () => ({}),
+    WebSocketImpl: /** @type {any} */ (FakeSocket),
+  });
+  const done = session.connect();
+  FakeSocket.last.onclose({ code: 1007, reason: 'Invalid JSON payload' });
+  await assert.rejects(done, /Gemini closed the session: Invalid JSON payload/);
+  assert.deepEqual(events, []);
+});
+
+test('a close after setup is reported as an event', async () => {
+  const events = [];
+  const session = new LiveSession({
+    apiKey: 'k',
+    setup: {},
+    onEvent: (e) => events.push(e),
+    runTool: () => ({}),
+    WebSocketImpl: /** @type {any} */ (FakeSocket),
+  });
+  const done = session.connect();
+  await FakeSocket.last.receive({ setupComplete: {} });
+  await done;
+  FakeSocket.last.onclose({ code: 1000, reason: '' });
+  assert.deepEqual(events.at(-1), { type: 'error', message: 'Session ended.' });
 });
