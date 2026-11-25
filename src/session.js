@@ -42,27 +42,38 @@ export function userSpoke(c) {
   c.lastSpeaker = 'user';
 }
 
+const LISTENING = 'Listening. Speak naturally; you can interrupt any time.';
+
+/** What each live event does on screen. @type {Record<string, (c: Controller, e: any) => void>} */
+const HANDLERS = {
+  'user-text': (c, e) => {
+    userSpoke(c);
+    say('user', e.text);
+    byId('lang-chip').textContent = `Language: ${detectLanguage(e.text)}`;
+  },
+  'agent-text': (c, e) => {
+    c.lastSpeaker = 'agent';
+    say('agent', e.text);
+  },
+  audio: (c, e) => {
+    showLatency(c.latency.reply(performance.now()));
+    c.player.play(e.data, e.rate);
+  },
+  interrupted: (c) => {
+    c.player.stop();
+    setStatus('You interrupted, listening…');
+  },
+  'turn-complete': (c) => setStatus(c.stopMic ? LISTENING : 'Connected. Type below.'),
+  error: (_c, e) => setStatus(e.message),
+  'go-away': () => setStatus('Session is ending, reconnect to continue.'),
+};
+
 /**
  * @param {Controller} c
  * @param {import('./live.js').LiveEvent} e
  */
 export function onLiveEvent(c, e) {
-  if (e.type === 'user-text') {
-    userSpoke(c);
-    say('user', e.text);
-    byId('lang-chip').textContent = `Language: ${detectLanguage(e.text)}`;
-  } else if (e.type === 'agent-text') {
-    c.lastSpeaker = 'agent';
-    say('agent', e.text);
-  } else if (e.type === 'audio') {
-    showLatency(c.latency.reply(performance.now()));
-    c.player.play(e.data, e.rate);
-  } else if (e.type === 'interrupted') {
-    c.player.stop();
-    setStatus('You interrupted, listening…');
-  } else if (e.type === 'error' || e.type === 'go-away') {
-    setStatus(e.type === 'error' ? e.message : 'Session is ending, reconnect to continue.');
-  }
+  HANDLERS[e.type]?.(c, e);
 }
 
 /** @param {number | null} ms */
@@ -88,7 +99,7 @@ export async function startLive(c, { apiKey, model, textOnly = false }) {
     WebSocketImpl: globalThis.WebSocket,
   });
   await c.live.connect();
-  setStatus(textOnly ? 'Connected. Type below.' : 'Listening. Speak naturally; you can interrupt any time.');
+  setStatus(textOnly ? 'Connected. Type below.' : LISTENING);
   if (!textOnly) {
     c.stopMic = await startMicrophone((b64, level) => {
       c.live?.send(audioMessage(b64));
