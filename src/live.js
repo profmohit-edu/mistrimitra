@@ -13,8 +13,10 @@ export function buildSetup({ model = LIVE_MODEL, systemInstruction, tools, voice
   return {
     setup: {
       model: `models/${model}`,
-      responseModalities: ['AUDIO'],
-      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+      },
       systemInstruction: { parts: [{ text: systemInstruction }] },
       tools: [{ functionDeclarations: tools }],
       inputAudioTranscription: {},
@@ -136,11 +138,21 @@ export class LiveSession {
       this.ws = ws;
       const timer = setTimeout(() => reject(new Error('Gemini did not answer in time.')), CONNECT_TIMEOUT_MS);
       ws.onopen = () => ws.send(JSON.stringify(this.setup));
+      let ready = false;
       ws.onerror = () => reject(new Error('Could not reach Gemini. Check the API key and your connection.'));
-      ws.onclose = (e) => this.onEvent({ type: 'error', message: e.reason || 'Session ended.' });
+      ws.onclose = (e) => {
+        clearTimeout(timer);
+        const message = e.reason ? `Gemini closed the session: ${e.reason}` : 'Session ended.';
+        if (ready) {
+          this.onEvent({ type: 'error', message });
+        } else {
+          reject(new Error(message));
+        }
+      };
       ws.onmessage = async (m) => {
         const events = parseServerMessage(await readFrame(m.data));
-        if (events.some((e) => e.type === 'ready')) {
+        if (!ready && events.some((e) => e.type === 'ready')) {
+          ready = true;
           clearTimeout(timer);
           resolve(undefined);
         }
