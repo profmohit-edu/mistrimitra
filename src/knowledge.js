@@ -5,7 +5,7 @@
  * steps until lockout/tagout is confirmed for the machine.
  * @module knowledge
  */
-import { PASSAGES } from './data/plant.js';
+import { MACHINES, PASSAGES } from './data/plant.js';
 import { SEARCH_TOP_K } from './config.js';
 
 /** Common shop-floor Hindi/Hinglish words mapped to the English used in manuals. */
@@ -27,6 +27,15 @@ export const HINGLISH = {
   rukna: 'stop',
   bearing: 'bearing',
   tel_kam: 'oil low',
+  check: 'check inspection',
+  badal: 'replace replacement change',
+  badalna: 'replace replacement change',
+  badla: 'replace replacement change',
+  dheela: 'loose tension slipping',
+  kam: 'low',
+  pichhli: 'previous history',
+  pichli: 'previous history',
+  history: 'history previous closed',
 };
 
 const STOPWORDS = new Set(
@@ -58,12 +67,21 @@ function expand(token) {
   return [...english.split(' ').filter(Boolean), ...parts];
 }
 
+/** Machine id plus its name and model, so "compressor" or "press" finds the right machine. @param {string} id */
+function machineWords(id) {
+  const m = MACHINES.find((x) => x.id === id);
+  return m ? `${id} ${m.name} ${m.model}` : id;
+}
+
 /**
  * Builds a BM25 index over passages.
  * @param {import('./data/plant.js').Passage[]} passages
  */
 export function buildIndex(passages) {
-  const docs = passages.map((p) => ({ passage: p, terms: tokenize(`${p.title} ${p.text} ${p.machineId}`) }));
+  const docs = passages.map((p) => ({
+    passage: p,
+    terms: tokenize(`${p.title} ${p.text} ${machineWords(p.machineId)}`),
+  }));
   const df = new Map();
   for (const d of docs) {
     for (const t of new Set(d.terms)) {
@@ -95,6 +113,9 @@ function score(index, doc, queryTerms) {
 
 const DEFAULT_INDEX = buildIndex(PASSAGES);
 
+/** Official sources rank above informal ones when the words match equally well. */
+export const AUTHORITY = { manual: 1.3, sop: 1.3, ticket: 1.1, chat: 0.6 };
+
 /**
  * @typedef {object} SearchHit
  * @property {string} id citation id
@@ -120,7 +141,7 @@ export function searchKnowledge(
   const terms = tokenize(`${query} ${machineId ?? ''}`);
   return index.docs
     .filter((d) => !machineId || d.passage.machineId === machineId || d.passage.machineId === '*')
-    .map((d) => ({ d, s: score(index, d, terms) }))
+    .map((d) => ({ d, s: score(index, d, terms) * (AUTHORITY[d.passage.kind] ?? 1) }))
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s)
     .slice(0, topK)
