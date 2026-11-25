@@ -1,13 +1,25 @@
 # MistriMitra
 
+![MistriMitra: a voice co-pilot for plant technicians on Gemini 3.8 Live](docs/hero.png)
+
 **Bolo. Samjho. Kaam karo.** A real-time voice co-pilot for plant maintenance technicians, built on **Gemini 3.8 Live**.
 
 A technician on the shop floor says, in Hindi, Hinglish or their own language, _"Line 3 CNC pe alarm 1014 aa raha hai"_. MistriMitra searches the English machine manuals, SOPs, past work orders and shift chats, answers aloud in the same language with the source named, keeps the technician safe (no repair steps before lockout/tagout), and acts in the maintenance system: it raises the work order, reserves the spare and alerts the supervisor, but only after the technician says yes.
 
-- Live demo: https://profmohit-edu.github.io/mistrimitra/
-- Demo video (real Gemini 3.8 Live session, 2 min): https://drive.google.com/file/d/1KP0M0F-DeuB3Dj1LqJ-CnpPpWjFqIqN1/view
+- **Try it:** https://profmohit-edu.github.io/mistrimitra/ (press "Run the scripted demo" with no key, or add a Gemini key and talk)
+- **Watch it:** [2-minute demo video, real Gemini 3.8 Live session](https://drive.google.com/file/d/1KP0M0F-DeuB3Dj1LqJ-CnpPpWjFqIqN1/view)
 - Track: Manufacturing Renaissance (BUILD 2036, TiE Global Summit)
 - Author: Prof. Mohit Tiwari, Assistant Professor, Computer Science, Bharati Vidyapeeth's College of Engineering, New Delhi
+
+## See it work
+
+Screenshots from a real, unscripted Gemini 3.8 Live session in Hinglish.
+
+![Step 1: ask in Hinglish, get an answer from the manual with the source named](docs/01-sourced-answer.png)
+
+![Step 2: lockout/tagout confirmed, repair steps unlock for that machine only](docs/02-safety-gate.png)
+
+![Step 3: the work order is read back and raised only after the technician says yes](docs/03-work-order.png)
 
 ## The problem
 
