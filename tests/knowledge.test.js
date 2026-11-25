@@ -47,3 +47,19 @@ test('a custom index can be passed', () => {
   const hits = searchKnowledge('spindle', { index, topK: 5 });
   assert.ok(hits.length <= 2);
 });
+
+test('retrieval benchmark: right source in the top 3 every time, first at least 85% of the time', async () => {
+  const { CASES } = await import('../bench/cases.js');
+  let top1 = 0;
+  for (const [query, expected, machineId] of CASES) {
+    const ids = searchKnowledge(query, { machineId: machineId || undefined, topK: 3 }).map((h) => h.id);
+    assert.ok(ids.includes(expected), `${query} → ${ids.join(', ')}`);
+    top1 += ids[0] === expected ? 1 : 0;
+  }
+  assert.ok(top1 / CASES.length >= 0.85, `top-1 ${top1}/${CASES.length}`);
+});
+
+test('naming the machine type finds that machine', () => {
+  const [top] = searchKnowledge('compressor bahut garam ho raha hai');
+  assert.equal(top.machineId, 'CMP-U1-01');
+});
